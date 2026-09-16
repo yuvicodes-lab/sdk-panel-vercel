@@ -30,6 +30,18 @@ function authTab(w) {
   $('authRegister').style.display = w === 'register' ? '' : 'none';
   $('tabLogin').className = 'dual-tab-btn' + (w === 'login' ? ' active-mundo' : '');
   $('tabRegister').className = 'dual-tab-btn' + (w === 'register' ? ' active-mundo' : '');
+  try { history.replaceState({}, '', w === 'register' ? '/register' : '/login'); } catch {}
+}
+
+// ---------- clean URLs: /dashboard /keys /generate /server /referral /test /login /register ----------
+function routeFromPath() {
+  const p = (location.pathname || '/').replace(/\/$/, '') || '/';
+  const m = { '/login': 'auth-login', '/register': 'auth-register', '/dashboard': 'dashboard', '/generate': 'generate', '/keys': 'keys', '/server': 'server', '/referral': 'referral', '/test': 'test' };
+  return m[p] || null;
+}
+function pushUrl(page) {
+  const path = page === 'auth-login' ? '/login' : page === 'auth-register' ? '/register' : '/' + page;
+  try { history.pushState({}, '', path); } catch {}
 }
 
 // ---------- nav ----------
@@ -46,17 +58,35 @@ function go(page) {
   if (page === 'server') loadServer();
   if (page === 'test') renderTest();
   if (page === 'referral') loadReferrals();
+  pushUrl(page);
 }
+window.addEventListener('popstate', () => {
+  const r = routeFromPath();
+  if (!r) return;
+  if (!ME) { showAuth(r === 'auth-register' ? 'register' : 'login'); return; }
+  if (r === 'auth-login' || r === 'auth-register') { go('dashboard'); return; }
+  if ((r === 'server' || r === 'referral') && ME.role !== 'OWNER') { go('dashboard'); return; }
+  go(r);
+});
 
 // ---------- auth ----------
 async function boot() {
+  const first = routeFromPath();
   try {
     const j = await api('/api/auth/me');
     ME = j.user;
     enterApp();
-  } catch { showAuth(); }
+    if (first && first !== 'auth-login' && first !== 'auth-register') {
+      if ((first === 'server' || first === 'referral') && ME.role !== 'OWNER') return;
+      go(first);
+    }
+  } catch {
+    showAuth(first === 'auth-register' ? 'register' : 'login');
+    pushUrl(first === 'auth-register' ? 'auth-register' : 'auth-login');
+  }
 }
-function showAuth() {
+function showAuth(tab) {
+  authTab(tab === 'register' ? 'register' : 'login');
   document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
   $('page-auth').classList.add('active');
   $('topbar').style.display = 'none';
