@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SDK Panel — MUNDO + BCORE</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap pb-28">
+
+  <!-- TOPBAR -->
+  <div class="topbar px-4 py-3 flex items-center justify-between" id="topbar" style="display:none">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-lg" style="background:linear-gradient(135deg,#10b981,#0d9488)"><i class="bi bi-shield-lock-fill"></i></div>
+      <div><p class="font-black text-sm leading-none">SDK PANEL</p><p class="text-[10px] text-slate-500" id="userLine">—</p></div>
+    </div>
+    <button onclick="logout()" class="clay-card px-3 py-2 text-xs font-bold text-red-500"><i class="bi bi-box-arrow-right"></i> Logout</button>
+  </div>
+
+  <div class="px-4 pt-4">
+
+    <!-- ============ AUTH ============ -->
+    <div id="page-auth" class="page active">
+      <div class="text-center mt-6 mb-6">
+        <div class="w-16 h-16 mx-auto rounded-3xl flex items-center justify-center text-white text-2xl shadow-xl mb-3" style="background:linear-gradient(135deg,#10b981,#6366f1)"><i class="bi bi-shield-lock-fill"></i></div>
+        <h1 class="text-2xl font-black">SDK PANEL</h1>
+        <p class="text-xs text-slate-500 mt-1">MUNDO + BCORE • Mobile First • Vercel Ready</p>
+      </div>
+      <div class="dual-tab-container mb-4">
+        <button class="dual-tab-btn active-mundo" id="tabLogin" onclick="authTab('login')">LOGIN</button>
+        <button class="dual-tab-btn" id="tabRegister" onclick="authTab('register')">REGISTER</button>
+      </div>
+      <!-- login -->
+      <div id="authLogin" class="glass-card p-5">
+        <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Username</label>
+        <input id="liUser" class="w-full clay-card px-4 py-3 text-sm mb-3 focus:outline-none" placeholder="username">
+        <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Password</label>
+        <input id="liPass" type="password" class="w-full clay-card px-4 py-3 text-sm mb-4 focus:outline-none" placeholder="••••••">
+        <button onclick="doLogin()" class="btn-premium w-full py-3.5 rounded-2xl font-extrabold text-sm">LOGIN <i class="bi bi-arrow-right"></i></button>
+        <p class="text-[11px] text-slate-400 mt-3 text-center">Default owner: <b class="code-box">owner / owner123</b></p>
+      </div>
+      <!-- register -->
+      <div id="authRegister" class="glass-card p-5" style="display:none">
+        <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Username</label>
+        <input id="rgUser" class="w-full clay-card px-4 py-3 text-sm mb-3 focus:outline-none" placeholder="new username">
+        <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Password</label>
+        <input id="rgPass" type="password" class="w-full clay-card px-4 py-3 text-sm mb-3 focus:outline-none" placeholder="min 4 chars">
+        <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Referral Code <span class="text-emerald-600">(owner se lo)</span></label>
+        <input id="rgRef" class="w-full clay-card px-4 py-3 text-sm mb-4 focus:outline-none code-box" placeholder="YUVI-XXXX-XXXX">
+        <button onclick="doRegister()" class="btn-premium w-full py-3.5 rounded-2xl font-extrabold text-sm">REGISTER <i class="bi bi-person-plus"></i></button>
+      </div>
+      <p id="authMsg" class="text-xs font-bold text-center mt-3"></p>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <div id="page-dashboard" class="page">
+      <div class="flex items-center justify-between gap-3 mb-4 mt-2">
+        <div><h1 class="text-xl font-black flex items-center gap-2"><i class="bi bi-speedometer2 text-emerald-500"></i> Dashboard</h1>
+        <p class="text-xs text-slate-500">All SDK keys & bindings</p></div>
+        <div class="dual-tab-container flex-1 max-w-[220px]">
+          <button class="dual-tab-btn active-mundo" data-g="dash" data-tab="mundo" onclick="switchTab('dash','mundo')">MUNDO</button>
+          <button class="dual-tab-btn" data-g="dash" data-tab="bcore" onclick="switchTab('dash','bcore')">BCORE</button>
+        </div>
+      </div>
+      <div class="tab-content-panel active" id="dash-mundo"></div>
+      <div class="tab-content-panel" id="dash-bcore"></div>
+    </div>
+
+    <!-- ============ GENERATE ============ -->
+    <div id="page-generate" class="page">
+      <div class="flex items-center justify-between gap-3 mb-4 mt-2">
+        <div><h1 class="text-xl font-black flex items-center gap-2"><i class="bi bi-key-fill text-emerald-500"></i> Generate</h1>
+        <p class="text-xs text-slate-500">New SDK key banao</p></div>
+        <div class="dual-tab-container flex-1 max-w-[220px]">
+          <button class="dual-tab-btn active-mundo" data-g="gen" data-tab="mundo" onclick="switchTab('gen','mundo')">MUNDO</button>
+          <button class="dual-tab-btn" data-g="gen" data-tab="bcore" onclick="switchTab('gen','bcore')">BCORE</button>
+        </div>
+      </div>
+      <div id="genMsg"></div>
+      <div class="tab-content-panel active" id="gen-mundo"></div>
+      <div class="tab-content-panel" id="gen-bcore"></div>
+    </div>
+
+    <!-- ============ KEYS ============ -->
+    <div id="page-keys" class="page">
+      <div class="flex items-center justify-between gap-3 mb-4 mt-2">
+        <div><h1 class="text-xl font-black flex items-center gap-2"><i class="bi bi-view-list text-emerald-500"></i> Keys</h1>
+        <p class="text-xs text-slate-500" id="keysSub">Manage keys</p></div>
+        <div class="dual-tab-container flex-1 max-w-[220px]">
+          <button class="dual-tab-btn active-mundo" data-g="keys" data-tab="mundo" onclick="switchTab('keys','mundo')">MUNDO</button>
+          <button class="dual-tab-btn" data-g="keys" data-tab="bcore" onclick="switchTab('keys','bcore')">BCORE</button>
+        </div>
+      </div>
+      <div class="tab-content-panel active" id="keys-mundo"></div>
+      <div class="tab-content-panel" id="keys-bcore"></div>
+    </div>
+
+    <!-- ============ SERVER (OWNER) ============ -->
+    <div id="page-server" class="page">
+      <div class="mt-2 mb-4"><h1 class="text-xl font-black flex items-center gap-2"><i class="bi bi-hdd-network-fill text-emerald-500"></i> Server & API</h1>
+      <p class="text-xs text-slate-500">Endpoints + maintenance (Owner only)</p></div>
+      <div class="dual-tab-container mb-4">
+        <button class="dual-tab-btn active-mundo" data-g="srv" data-tab="mundo" onclick="switchTab('srv','mundo')">MUNDO</button>
+        <button class="dual-tab-btn" data-g="srv" data-tab="bcore" onclick="switchTab('srv','bcore')">BCORE</button>
+      </div>
+      <div id="srvMsg"></div>
+      <div class="tab-content-panel active" id="srv-mundo"></div>
+      <div class="tab-content-panel" id="srv-bcore"></div>
+    </div>
+
+    <!-- ============ REFERRAL (OWNER) ============ -->
+    <div id="page-referral" class="page">
+      <div class="mt-2 mb-4"><h1 class="text-xl font-black flex items-center gap-2"><i class="bi bi-ticket-perforated-fill text-emerald-500"></i> Referrals</h1>
+      <p class="text-xs text-slate-500">Role + duration select karke code banao (Owner only)</p></div>
+      <div class="glass-card p-5 mb-4">
+        <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Role select</label>
+        <select id="refRole" class="w-full clay-card px-4 py-3 text-sm font-bold mb-3">
+          <option value="ADMIN" selected>ADMIN — sirf generate + apni keys</option>
+          <option value="OWNER">OWNER — full access</option>
+        </select>
+        <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Duration select (code validity)</label>
+        <select id="refDur" class="w-full clay-card px-4 py-3 text-sm font-bold mb-4">
+          <option value="15">15 Days</option>
+          <option value="30" selected>30 Days</option>
+          <option value="60">60 Days</option>
+        </select>
+        <button onclick="createReferral()" class="btn-premium w-full py-3.5 rounded-2xl font-extrabold text-sm"><i class="bi bi-magic"></i> GENERATE REFERRAL CODE</button>
+        <div id="refNew" class="mt-3"></div>
+      </div>
+      <div id="refList" class="space-y-2"></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav" id="bottomNav" style="display:none">
+    <button id="nav-dashboard" onclick="go('dashboard')"><i class="bi bi-speedometer2"></i>Home</button>
+    <button id="nav-generate" onclick="go('generate')"><i class="bi bi-key-fill"></i>Generate</button>
+    <button id="nav-keys" onclick="go('keys')"><i class="bi bi-view-list"></i>Keys</button>
+    <button id="nav-server" onclick="go('server')"><i class="bi bi-hdd-network-fill"></i>Server</button>
+    <button id="nav-referral" onclick="go('referral')"><i class="bi bi-ticket-perforated-fill"></i>Referral</button>
+  </nav>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div id="modal" class="fixed inset-0 z-[100] modal-bg items-center justify-center p-4" style="display:none">
+  <div class="glass-card p-6 max-w-sm w-full">
+    <h3 class="font-black text-center mb-1">Are you sure?</h3>
+    <p id="modalMsg" class="text-xs text-slate-500 text-center mb-5">Confirm karo</p>
+    <div class="flex gap-2">
+      <button onclick="closeModal()" class="flex-1 py-3 rounded-xl bg-white font-bold text-sm border">Cancel</button>
+      <button id="modalOk" class="flex-1 py-3 rounded-xl btn-premium font-bold text-sm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
