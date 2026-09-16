@@ -17,13 +17,12 @@ lib/
   auth.ts      → HMAC token + cookie session
   crypto.ts    → BCORE RC4 + MUNDO AES-128-ECB (PHP ke same)
   verify.ts    → Key Test page ke liye shared dry-run validation (bina limit kharch kiye)
-api/
-  auth/login.ts | register.ts | me.ts (GET=me, POST=logout)
-  referrals/create.ts (OWNER) | list.ts (GET=list, POST=delete)
-  keys/generate.ts | list.ts | action.ts (block/unblock/delete/bind) | test.ts (dry-run check)
-  dashboard/stats.ts
-  server/status.ts (GET + POST owner only, live activity included)
-  verify/mundo.ts | bcore.ts   (POST encrypted, panel_code nahi, har hit activity me log)
+api/  (sirf 5 functions — Vercel Hobby 12-function limit ke andar)
+  auth.ts      → /api/auth?op=login|register|me|logout
+  referrals.ts → /api/referrals?op=create|list|delete (OWNER)
+  keys.ts      → /api/keys?op=generate|list|do|test
+  panel.ts     → /api/panel?op=stats (dashboard) | server (status+activity)
+  verify.ts    → /api/verify?engine=mundo|bcore (POST encrypted, har hit log)
 public/
   index.html | style.css | app.js
 data/db.json (auto-create, gitignore)
@@ -57,7 +56,7 @@ npx vercel dev
 2. Logout → Register → username + password + referral code → ADMIN account ban gaya.
 3. ADMIN login → Dashboard (sirf apne keys ke stats) → Generate (MUNDO/BCORE) → Keys (sirf apni, blur + copy + block/delete + pkg/app bind).
 4. OWNER login → sab keys (`@username` ke saath) + Server (endpoint URL + maintenance toggle) + Referrals (list/delete).
-5. App verify: `POST https://<tumhara-domain>/api/verify/mundo` ya `/api/verify/bcore` — encrypted body, same format jaise PHP me tha (salt/secret same rakhe hain taaki purana `.so`/client bina change ke chale).
+5. App verify: `POST https://<tumhara-domain>/api/verify?engine=mundo` ya `?engine=bcore` — encrypted body, same format jaise PHP me tha (salt/secret same rakhe hain taaki purana `.so`/client bina change ke chale).
 
 ## Verify format (panel_code HATA diya)
 

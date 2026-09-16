@@ -73,7 +73,7 @@ window.addEventListener('popstate', () => {
 async function boot() {
   const first = routeFromPath();
   try {
-    const j = await api('/api/auth/me');
+    const j = await api('/api/auth?op=me');
     ME = j.user;
     enterApp();
     if (first && first !== 'auth-login' && first !== 'auth-register') {
@@ -106,23 +106,23 @@ function enterApp() {
 async function doLogin() {
   setMsg('authMsg', 'Login...', 'text-slate-500');
   try {
-    const j = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ username: $('liUser').value, password: $('liPass').value }) });
+    const j = await api('/api/auth?op=login', { method: 'POST', body: JSON.stringify({ username: $('liUser').value, password: $('liPass').value }) });
     ME = j.user; enterApp();
   } catch (e) { setMsg('authMsg', e.message, 'text-red-500'); }
 }
 async function doRegister() {
   setMsg('authMsg', 'Register...', 'text-slate-500');
   try {
-    const j = await api('/api/auth/register', { method: 'POST', body: JSON.stringify({ username: $('rgUser').value, password: $('rgPass').value, referralCode: $('rgRef').value }) });
+    const j = await api('/api/auth?op=register', { method: 'POST', body: JSON.stringify({ username: $('rgUser').value, password: $('rgPass').value, referralCode: $('rgRef').value }) });
     ME = j.user; enterApp();
   } catch (e) { setMsg('authMsg', e.message, 'text-red-500'); }
 }
-async function logout() { await api('/api/auth/me', { method: 'POST' }); location.reload(); }
+async function logout() { await api('/api/auth?op=logout', { method: 'POST' }); location.reload(); }
 function setMsg(id, t, cls) { const e = $(id); e.textContent = t; e.className = 'text-xs font-bold text-center mt-3 ' + cls; }
 
 // ---------- dashboard ----------
 async function loadDashboard() {
-  const j = await api('/api/dashboard/stats');
+  const j = await api('/api/panel?op=stats');
   const card = (label, val, sub, grad, icon) => `
     <div class="glass-card p-4">
       <div class="flex items-center justify-between mb-2">
@@ -184,7 +184,7 @@ function renderGenerate() {
 }
 async function genKey(eng) {
   try {
-    const j = await api('/api/keys/generate', { method: 'POST', body: JSON.stringify({
+    const j = await api('/api/keys?op=generate', { method: 'POST', body: JSON.stringify({
       engine: eng, sdk_key: $('g-' + eng + '-key').value, duration: $('g-' + eng + '-dur').value,
       pkg_limit: $('g-' + eng + '-pkg').value, app_limit: $('g-' + eng + '-app').value,
       feature1: $('g-' + eng + '-f1').checked, feature2: $('g-' + eng + '-f2').checked }) });
@@ -195,7 +195,7 @@ async function genKey(eng) {
 
 // ---------- keys ----------
 async function loadKeys() {
-  const j = await api('/api/keys/list');
+  const j = await api('/api/keys?op=list');
   KEYS = j;
   $('keysSub').textContent = ME.role === 'OWNER' ? 'All users keys' : 'Sirf tumhari keys';
   renderKeys('mundo', j.mundo, 'purple');
@@ -269,20 +269,20 @@ function copyText(t, btn) {
   }).catch(() => { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); });
 }
 async function keyAction(action, engine, key_id) {
-  await api('/api/keys/action', { method: 'POST', body: JSON.stringify({ action, engine, key_id }) });
+  await api('/api/keys?op=do', { method: 'POST', body: JSON.stringify({ action, engine, key_id }) });
   loadKeys(); loadDashboard();
 }
 async function bindAction(action, engine, key_id, bind_id) {
-  await api('/api/keys/action', { method: 'POST', body: JSON.stringify({ action, engine, key_id, bind_id }) });
+  await api('/api/keys?op=do', { method: 'POST', body: JSON.stringify({ action, engine, key_id, bind_id }) });
   loadKeys();
 }
 async function saveBind(engine, key_id, bind_id) {
-  await api('/api/keys/action', { method: 'POST', body: JSON.stringify({ action: 'save_bind', engine, key_id, bind_id, pkg_name: $('bp-' + bind_id).value, app_name: $('ba-' + bind_id).value }) });
+  await api('/api/keys?op=do', { method: 'POST', body: JSON.stringify({ action: 'save_bind', engine, key_id, bind_id, pkg_name: $('bp-' + bind_id).value, app_name: $('ba-' + bind_id).value }) });
   loadKeys();
 }
 async function addBind(engine, key_id) {
   try {
-    await api('/api/keys/action', { method: 'POST', body: JSON.stringify({ action: 'add_bind', engine, key_id, pkg_name: $('np-' + key_id).value, app_name: $('na-' + key_id).value }) });
+    await api('/api/keys?op=do', { method: 'POST', body: JSON.stringify({ action: 'add_bind', engine, key_id, pkg_name: $('np-' + key_id).value, app_name: $('na-' + key_id).value }) });
     loadKeys();
   } catch (e) { alert(e.message); }
 }
@@ -313,7 +313,7 @@ function renderTest() {
 async function runTest(eng) {
   $('testResult').innerHTML = '<div class="glass-card p-4 text-xs text-slate-500 text-center">Testing...</div>';
   try {
-    const r = await api('/api/keys/test', { method: 'POST', body: JSON.stringify({
+    const r = await api('/api/keys?op=test', { method: 'POST', body: JSON.stringify({
       engine: eng, sdk_key: $('t-' + eng + '-key').value, pkg_name: $('t-' + eng + '-pkg').value,
       app_name: $('t-' + eng + '-app').value, device_id: $('t-' + eng + '-dev').value }) });
     $('testResult').innerHTML = `
@@ -334,7 +334,7 @@ async function runTest(eng) {
 // ---------- server ----------
 async function loadServer() {
   if (ME.role !== 'OWNER') { $('srv-mundo').innerHTML = '<div class="glass-card p-6 text-center text-sm">Only OWNER</div>'; return; }
-  const j = await api('/api/server/status');
+  const j = await api('/api/panel?op=server');
   SERVER = j;
 
   // live status strip + storage warning
@@ -408,7 +408,7 @@ function sampleCard(eng) {
 }
 async function saveServer(eng) {
   try {
-    await api('/api/server/status', { method: 'POST', body: JSON.stringify({ engine: eng, maintenance_mode: $('m-' + eng).checked ? 1 : 0, maintenance_message: $('mm-' + eng).value }) });
+    await api('/api/panel?op=server', { method: 'POST', body: JSON.stringify({ engine: eng, maintenance_mode: $('m-' + eng).checked ? 1 : 0, maintenance_message: $('mm-' + eng).value }) });
     $('srvMsg').innerHTML = `<div class="glass-card p-3 mb-3 border-l-4 border-emerald-500 text-xs font-bold text-emerald-700">${eng} status saved ✓</div>`;
     loadServer();
   } catch (e) { alert(e.message); }
@@ -417,14 +417,14 @@ async function saveServer(eng) {
 // ---------- referrals ----------
 async function createReferral() {
   try {
-    const j = await api('/api/referrals/create', { method: 'POST', body: JSON.stringify({ role: $('refRole').value, durationDays: Number($('refDur').value) }) });
+    const j = await api('/api/referrals?op=create', { method: 'POST', body: JSON.stringify({ role: $('refRole').value, durationDays: Number($('refDur').value) }) });
     $('refNew').innerHTML = `<div class="clay-card p-3 flex items-center gap-2 mt-2"><code class="flex-1 font-mono font-black text-emerald-600">${j.referral.code}</code><button onclick="copyText('${j.referral.code}',this)" class="clay-card px-3 py-1.5 text-xs font-bold">Copy</button></div><p class="text-[11px] text-slate-500 mt-1">Role: <b>${j.referral.role}</b> • Valid ${j.referral.durationDays} din • Isko register me use karo</p>`;
     loadReferrals();
   } catch (e) { alert(e.message); }
 }
 async function loadReferrals() {
   if (ME.role !== 'OWNER') return;
-  const j = await api('/api/referrals/list');
+  const j = await api('/api/referrals?op=list');
   $('refList').innerHTML = j.referrals.length === 0 ? '<div class="glass-card p-6 text-center text-xs text-slate-400">Koi referral nahi — upar se banao</div>' :
     j.referrals.map((r) => `<div class="glass-card p-4 flex items-center gap-3">
       <div class="flex-1 min-w-0"><p class="font-mono font-black text-sm">${r.code}</p>
@@ -435,7 +435,7 @@ async function loadReferrals() {
     </div>`).join('');
 }
 async function delRef(code) {
-  await api('/api/referrals/list', { method: 'POST', body: JSON.stringify({ action: 'delete', code }) });
+  await api('/api/referrals?op=delete', { method: 'POST', body: JSON.stringify({ code }) });
   loadReferrals();
 }
 
