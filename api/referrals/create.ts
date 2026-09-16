@@ -2,8 +2,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { loadDB, persistDB, newReferralCode } from '../../lib/db';
 import { getAuthUser, sendJson } from '../../lib/auth';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  const user = getAuthUser(req);
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const user = await getAuthUser(req);
   if (!user) return sendJson(res, 401, { error: 'Login required' });
   if (user.role !== 'OWNER') return sendJson(res, 403, { error: 'Only OWNER can create referrals' });
   if (req.method !== 'POST') return sendJson(res, 405, { error: 'Only POST' });
@@ -13,7 +13,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const d = Number(durationDays);
   if (![15, 30, 60].includes(d)) return sendJson(res, 400, { error: 'Duration 15 / 30 / 60 only' });
 
-  const db = loadDB();
+  const db = await loadDB();
   let code = newReferralCode();
   while (db.referrals.some((x) => x.code === code)) code = newReferralCode();
 
@@ -29,6 +29,6 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     usedBy: null as number | null,
   };
   db.referrals.push(ref);
-  persistDB(db);
+  await persistDB(db);
   return sendJson(res, 200, { ok: true, referral: ref });
 }

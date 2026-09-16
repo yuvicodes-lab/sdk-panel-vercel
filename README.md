@@ -13,16 +13,17 @@ PHP wale panel ka same UI, par **panel_code system hata diya**. Ab simple hai:
 vercel.json
 package.json / tsconfig.json
 lib/
-  db.ts        → JSON file + memory DB (users, referrals, keys, bindings, server_status)
+  db.ts        → Upstash Redis (Vercel) + JSON file (local) + memory cache; verify activity log bhi
   auth.ts      → HMAC token + cookie session
   crypto.ts    → BCORE RC4 + MUNDO AES-128-ECB (PHP ke same)
+  verify.ts    → Key Test page ke liye shared dry-run validation (bina limit kharch kiye)
 api/
   auth/login.ts | register.ts | me.ts (GET=me, POST=logout)
   referrals/create.ts (OWNER) | list.ts (GET=list, POST=delete)
-  keys/generate.ts | list.ts | action.ts (block/unblock/delete/bind)
+  keys/generate.ts | list.ts | action.ts (block/unblock/delete/bind) | test.ts (dry-run check)
   dashboard/stats.ts
-  server/status.ts (GET + POST owner only)
-  verify/mundo.ts | bcore.ts   (POST encrypted, panel_code nahi)
+  server/status.ts (GET + POST owner only, live activity included)
+  verify/mundo.ts | bcore.ts   (POST encrypted, panel_code nahi, har hit activity me log)
 public/
   index.html | style.css | app.js
 data/db.json (auto-create, gitignore)
@@ -42,7 +43,11 @@ npx vercel dev
 1. Is folder ko GitHub par push karo.
 2. https://vercel.com → New Project → repo import → Deploy (koi build command nahi chahiye, `vercel.json` routes sambhal lega).
 3. Env (optional): `SESSION_SECRET` = koi lamba random string.
-4. Deploy URL kholo → `owner / owner123` se login → Referral banao → Register test karo.
+4. **IMPORTANT — Upstash Redis (nahi to keys gayab dikhengi!):** Vercel serverless me har API alag instance par chalti hai, isliye data ke liye free Upstash Redis lagao:
+   - https://upstash.com → Sign up → Redis → Create Database (region: tumhare najdeek, e.g. ap-south-1 Mumbai) → REST API section se copy karo: `UPSTASH_REDIS_REST_URL` aur `UPSTASH_REDIS_REST_TOKEN`
+   - Vercel → tumhara project → Settings → Environment Variables → dono add karo (Production + Preview + Development tick) → **Redeploy** karo
+   - Server page par Storage card me **Redis / Persistent ✓** dikhega to samjho sahi lag gaya. Local me (`vercel dev`) ye env nahi honge to `data/db.json` file use hogi — waha sab already kaam karega.
+5. Deploy URL kholo → `owner / owner123` se login → Referral banao → Register test karo → Generate → Keys me dikhegi → Test page se dry-run check karo.
 
 > Note: DB `data/db.json` + memory me hai (Vercel free par persistent Postgres nahi). Restart/redeploy par data reset ho sakta hai. Permanent chahiye to baad me Vercel KV/Postgres lagana — API same rahegi.
 

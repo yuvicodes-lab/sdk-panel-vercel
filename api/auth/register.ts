@@ -3,7 +3,7 @@ import { loadDB, persistDB, hashPassword } from '../../lib/db';
 import { signToken, setSessionCookie, sendJson } from '../../lib/auth';
 import crypto from 'crypto';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return sendJson(res, 405, { error: 'Only POST' });
   const { username = '', password = '', referralCode = '' } = (req.body || {}) as any;
   const u = String(username).trim();
@@ -14,7 +14,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   if (p.length < 4 || p.length > 50) return sendJson(res, 400, { error: 'Password 4-50 chars' });
   if (!ref) return sendJson(res, 400, { error: 'Referral code required' });
 
-  const db = loadDB();
+  const db = await loadDB();
   if (db.users.some((x) => x.username.toLowerCase() === u.toLowerCase()))
     return sendJson(res, 400, { error: 'Username already taken' });
 
@@ -37,7 +37,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   db.users.push(user);
   r.used = true;
   r.usedBy = user.id;
-  persistDB(db);
+  await persistDB(db);
 
   const token = signToken(user.id);
   setSessionCookie(res, token);

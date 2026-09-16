@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { loadDB, persistDB } from '../../lib/db';
+import { loadDB, persistDB, logVerify, maskKey, DB } from '../../lib/db';
 import { bcoreDecrypt, bcoreEncrypt } from '../../lib/crypto';
 
 function enc(data: any, code: number, res: VercelResponse) {
@@ -7,10 +7,16 @@ function enc(data: any, code: number, res: VercelResponse) {
   res.send(bcoreEncrypt(JSON.stringify(data)));
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+async function logged(db: DB, e: Parameters<typeof logVerify>[1], data: any, code: number, res: VercelResponse) {
+  logVerify(db, e);
+  await persistDB(db);
+  return enc(data, code, res);
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
   if (req.method !== 'POST') return enc({ status: 'error', code: 'METHOD_NOT_ALLOWED', message: 'Only POST' }, 405, res);
-  const db = loadDB();
+  const db = await loadDB();
 
   let raw = '';
   if (typeof req.body === 'string') raw = req.body.trim();
@@ -34,38 +40,52 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   return verifyPlain(String(input.sdk_key || input.user_key || ''), String(input.pkg_name || input.package_name || ''), String(input.app_name || ''), String(input.device_id || ''), db, res);
 }
 
-function verifyPlain(sdk_key: string, pkg_name: string, app_name: string, device_id: string, db: any, res: VercelResponse) {
+async function verifyPlain(sdk_key: string, pkg_name: string, app_name: string, device_id: string, db: DB, res: VercelResponse) {
+  const tag = (key: string) => ({ engine: 'BCORE' as const, key: maskKey(key || sdk_key), pkg: pkg_name, app: app_name, t: new Date().toISOString() });
   if (db.server_status.BCORE.maintenance_mode === 1)
-    return enc({ status: 'error', code: 'SERVER_MAINTENANCE', message: db.server_status.BCORE.maintenance_message || 'Server is under maintenance' }, 503, res);
+    return logged(db, { ...tag(''), ok: false, code: 'SERVER_MAINTENANCE' },
+      { status: 'error', code: 'SERVER_MAINTENANCE', message: db.server_status.BCORE.maintenance_message || 'Server is under maintenance' }, 503, res);
   if (!sdk_key || !pkg_name || !app_name)
     return enc({ status: 'error', code: 'MISSING_PARAMETER', message: 'Required parameter is missing' }, 400, res);
 
   const key = db.bcore_keys.find((k: any) => k.sdk_key === sdk_key.trim());
-  if (!key) return enc({ status: 'error', code: 'INVALID_KEY', message: 'Invalid SDK key' }, 400, res);
-  if (key.is_blocked) return enc({ status: 'error', code: 'INVALID_KEY', message: 'Invalid SDK key' }, 403, res);
+  if (!key)
+    return logged(db, { ...tag(''), ok: false, code: 'INVALID_KEY' },
+      { status: 'error', code: 'INVALID_KEY', message: 'Invalid SDK key' }, 400, res);
+  if (key.is_blocked)
+    return logged(db, { ...tag(key.sdk_key), ok: false, code: 'INVALID_KEY' },
+      { status: 'error', code: 'INVALID_KEY', message: 'Invalid SDK key' }, 403, res);
 
   const exp = new Date(key.created_at).getTime() + key.duration_days * 86400 * 1000;
-  if (Date.now() > exp) return enc({ status: 'error', code: 'EXPIRED_KEY', message: 'SDK key has expired' }, 403, res);
+  if (Date.now() > exp)
+    return logged(db, { ...tag(key.sdk_key), ok: false, code: 'EXPIRED_KEY' },
+      { status: 'error', code: 'EXPIRED_KEY', message: 'SDK key has expired' }, 403, res);
 
   const binds = db.bcore_bindings.filter((b: any) => b.sdk_key_id === key.id);
   const pkgs = new Set(binds.map((b: any) => b.pkg_name));
   if (!pkgs.has(pkg_name) && pkgs.size >= key.pkg_limit)
-    return enc({ status: 'error', code: 'PKG_LIMIT_REACHED', message: 'Package limit reached' }, 403, res);
+    return logged(db, { ...tag(key.sdk_key), ok: false, code: 'PKG_LIMIT_REACHED' },
+      { status: 'error', code: 'PKG_LIMIT_REACHED', message: 'Package limit reached' }, 403, res);
 
   let mb = binds.find((b: any) => b.pkg_name === pkg_name && b.app_name === app_name);
   if (!mb) {
     if (binds.length >= key.pkg_limit * key.app_limit)
-      return enc({ status: 'error', code: 'APP_LIMIT_REACHED', message: 'App name limit reached' }, 403, res);
+      return logged(db, { ...tag(key.sdk_key), ok: false, code: 'APP_LIMIT_REACHED' },
+        { status: 'error', code: 'APP_LIMIT_REACHED', message: 'App name limit reached' }, 403, res);
     if (binds.filter((b: any) => b.pkg_name === pkg_name).length >= key.app_limit)
-      return enc({ status: 'error', code: 'APP_LIMIT_REACHED', message: 'App name limit reached' }, 403, res);
+      return logged(db, { ...tag(key.sdk_key), ok: false, code: 'APP_LIMIT_REACHED' },
+        { status: 'error', code: 'APP_LIMIT_REACHED', message: 'App name limit reached' }, 403, res);
     const row = { id: db.seq.bind++, sdk_key_id: key.id, pkg_name, app_name, is_blocked: 0 };
     db.bcore_bindings.push(row);
-    persistDB(db);
     mb = row;
   }
-  if ((mb as any).is_blocked) return enc({ status: 'error', code: 'INVALID_KEY', message: 'This app binding is blocked' }, 403, res);
+  if ((mb as any).is_blocked)
+    return logged(db, { ...tag(key.sdk_key), ok: false, code: 'BINDING_BLOCKED' },
+      { status: 'error', code: 'INVALID_KEY', message: 'This app binding is blocked' }, 403, res);
 
   const f1 = key.feature1 === 1, f2 = key.feature2 === 1;
+  logVerify(db, { ...tag(key.sdk_key), ok: true, code: 'VALID' });
+  await persistDB(db);
   return enc({
     status: 'success', code: 'VALID', message: 'SDK key validated successfully',
     feature1: f1 ? 1 : 0, feature2: f2 ? 1 : 0,

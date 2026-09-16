@@ -35,12 +35,12 @@ export function getTokenFromReq(req: VercelRequest): string | null {
   return null;
 }
 
-export function getAuthUser(req: VercelRequest): User | null {
+export async function getAuthUser(req: VercelRequest): Promise<User | null> {
   const token = getTokenFromReq(req);
   if (!token) return null;
   const data = verifyToken(token);
   if (!data) return null;
-  const db = loadDB();
+  const db = await loadDB();
   return db.users.find((u) => u.id === data.userId) || null;
 }
 

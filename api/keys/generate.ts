@@ -6,8 +6,8 @@ function normEngine(e: any): 'MUNDO' | 'BCORE' {
   return String(e).toUpperCase() === 'BCORE' ? 'BCORE' : 'MUNDO';
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  const user = getAuthUser(req);
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const user = await getAuthUser(req);
   if (!user) return sendJson(res, 401, { error: 'Login required' });
   if (req.method !== 'POST') return sendJson(res, 405, { error: 'Only POST' });
 
@@ -23,7 +23,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   if (![7, 15, 30, 60].includes(dur)) return sendJson(res, 400, { error: 'Invalid duration' });
   if (pkgL > 10 || appL > 20) return sendJson(res, 400, { error: 'Limits too high (pkg<=10, app<=20)' });
 
-  const db = loadDB();
+  const db = await loadDB();
   const table = eng === 'BCORE' ? db.bcore_keys : db.mundo_keys;
   if (customKey === '') customKey = newSdkKey();
   if (table.some((k) => k.sdk_key === customKey)) return sendJson(res, 400, { error: `${eng} me ye key already hai` });
@@ -41,6 +41,6 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     created_at: new Date().toISOString(),
   };
   table.push(row);
-  persistDB(db);
+  await persistDB(db);
   return sendJson(res, 200, { ok: true, engine: eng, key: row });
 }

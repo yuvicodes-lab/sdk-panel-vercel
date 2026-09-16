@@ -44,6 +44,7 @@ function go(page) {
   if (page === 'keys') loadKeys();
   if (page === 'generate') renderGenerate();
   if (page === 'server') loadServer();
+  if (page === 'test') renderTest();
   if (page === 'referral') loadReferrals();
 }
 
@@ -66,9 +67,10 @@ function enterApp() {
   $('topbar').style.display = '';
   $('bottomNav').style.display = '';
   $('userLine').textContent = ME.username + ' • ' + ME.role;
-  // ADMIN: server + referral hide
+  // ADMIN: server + referral hide (test sabko)
   $('nav-server').style.display = ME.role === 'OWNER' ? '' : 'none';
   $('nav-referral').style.display = ME.role === 'OWNER' ? '' : 'none';
+  $('nav-test').style.display = '';
   go('dashboard');
 }
 async function doLogin() {
@@ -255,11 +257,65 @@ async function addBind(engine, key_id) {
   } catch (e) { alert(e.message); }
 }
 
+// ---------- key test (dry-run) ----------
+function renderTest() {
+  const form = (eng, grad, icon) => `
+    <div class="glass-card p-5">
+      <div class="flex items-center gap-3 mb-4 pb-3 border-b">
+        <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow" style="background:${grad}"><i class="bi ${icon}"></i></div>
+        <div><h3 class="font-black text-sm">${eng} Key Test</h3><p class="text-[11px] text-slate-500">Dry-run — kuch save nahi hoga</p></div>
+      </div>
+      <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">SDK Key</label>
+      <input id="t-${eng}-key" class="w-full clay-card px-4 py-3 text-sm font-mono mb-3 focus:outline-none" placeholder="Keys page se copy karo">
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div><label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Pkg Name</label>
+        <input id="t-${eng}-pkg" class="w-full clay-card px-3 py-3 text-xs font-mono focus:outline-none" placeholder="com.example.app"></div>
+        <div><label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">App Name</label>
+        <input id="t-${eng}-app" class="w-full clay-card px-3 py-3 text-xs font-mono focus:outline-none" placeholder="MyApp"></div>
+      </div>
+      <label class="block text-[11px] font-extrabold text-slate-500 uppercase mb-1">Device ID (optional)</label>
+      <input id="t-${eng}-dev" class="w-full clay-card px-4 py-3 text-sm font-mono mb-4 focus:outline-none" placeholder="HWID / device id">
+      <button onclick="runTest('${eng}')" class="btn-premium w-full py-3.5 rounded-2xl font-extrabold text-sm"><i class="bi bi-flask"></i> TEST ${eng} KEY</button>
+    </div>`;
+  $('tst-mundo').innerHTML = form('MUNDO', 'linear-gradient(135deg,#8b5cf6,#6366f1)', 'bi-cpu');
+  $('tst-bcore').innerHTML = form('BCORE', 'linear-gradient(135deg,#f59e0b,#f97316)', 'bi-lightning-charge-fill');
+}
+async function runTest(eng) {
+  $('testResult').innerHTML = '<div class="glass-card p-4 text-xs text-slate-500 text-center">Testing...</div>';
+  try {
+    const r = await api('/api/keys/test', { method: 'POST', body: JSON.stringify({
+      engine: eng, sdk_key: $('t-' + eng + '-key').value, pkg_name: $('t-' + eng + '-pkg').value,
+      app_name: $('t-' + eng + '-app').value, device_id: $('t-' + eng + '-dev').value }) });
+    $('testResult').innerHTML = `
+      <div class="glass-card p-4 mb-3 ${r.ok ? 'border-l-4 border-emerald-500' : 'border-l-4 border-red-500'}">
+        <p class="font-black text-sm ${r.ok ? 'text-emerald-700' : 'text-red-600'}">${r.ok ? 'KEY WORKING HAI' : 'FAILED: ' + esc(r.code)}</p>
+        <p class="text-xs text-slate-500 mt-0.5">${esc(r.message)} (${esc(r.engine)})</p>
+      </div>
+      <div class="glass-card p-4"><p class="text-[11px] font-extrabold text-slate-500 uppercase mb-2">Step-by-step</p>
+      ${r.steps.map((s) => `<div class="flex items-start gap-2 py-1.5 border-b border-slate-100 last:border-0">
+        <span class="${s.pass ? 'text-emerald-500' : 'text-red-500'} font-black">${s.pass ? '✓' : '✗'}</span>
+        <div><p class="text-xs font-bold">${esc(s.label)}</p><p class="text-[11px] text-slate-500">${esc(s.info || '')}</p></div>
+      </div>`).join('')}
+      ${r.data ? `<div class="bg-slate-900 rounded-xl p-3 mt-2 overflow-x-auto"><pre class="text-[11px] font-mono text-emerald-300">${esc(JSON.stringify(r.data, null, 2))}</pre></div>` : ''}
+      </div>`;
+  } catch (e) { $('testResult').innerHTML = `<div class="glass-card p-4 text-xs font-bold text-red-600">${esc(e.message)}</div>`; }
+}
+
 // ---------- server ----------
 async function loadServer() {
   if (ME.role !== 'OWNER') { $('srv-mundo').innerHTML = '<div class="glass-card p-6 text-center text-sm">Only OWNER</div>'; return; }
   const j = await api('/api/server/status');
   SERVER = j;
+
+  // live status strip + storage warning
+  const anyMaint = j.status.MUNDO.maintenance_mode === 1 || j.status.BCORE.maintenance_mode === 1;
+  $('srvStrip').innerHTML = `
+    <div class="glass-card p-3"><div class="flex items-center justify-between mb-1"><i class="bi bi-circle-fill ${anyMaint ? 'text-amber-500' : 'text-emerald-500'} text-[10px] animate-pulse"></i><span class="text-[9px] font-extrabold ${anyMaint ? 'text-amber-500 bg-amber-50' : 'text-emerald-500 bg-emerald-50'} px-2 py-0.5 rounded-lg uppercase">${anyMaint ? 'Partial' : 'Online'}</span></div><p class="text-xs font-black">Server</p><p class="text-[10px] text-slate-500">${anyMaint ? 'Maintenance ON' : 'All systems go'}</p></div>
+    <div class="glass-card p-3"><div class="flex items-center justify-between mb-1"><i class="bi bi-activity text-teal-500"></i><span class="text-[9px] font-extrabold text-teal-500 bg-teal-50 px-2 py-0.5 rounded-lg uppercase">${j.meta.health}</span></div><p class="text-xs font-black">API Health</p><p class="text-[10px] text-slate-500">&lt;120ms response</p></div>
+    <div class="glass-card p-3"><div class="flex items-center justify-between mb-1"><i class="bi bi-speedometer2 text-indigo-500"></i><span class="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-lg uppercase">${j.meta.load}</span></div><p class="text-xs font-black">Load</p><p class="text-[10px] text-slate-500">CPU / Memory</p></div>
+    <div class="glass-card p-3"><div class="flex items-center justify-between mb-1"><i class="bi bi-hdd text-emerald-500"></i><span class="text-[9px] font-extrabold ${j.meta.persistent ? 'text-emerald-500 bg-emerald-50' : 'text-amber-500 bg-amber-50'} px-2 py-0.5 rounded-lg uppercase">${j.meta.persistent ? 'Redis' : 'File'}</span></div><p class="text-xs font-black">Storage</p><p class="text-[10px] text-slate-500">${j.meta.persistent ? 'Persistent ✓' : 'Temporary!'}</p></div>`;
+  $('srvMsg').innerHTML = (!j.meta.persistent && location.hostname.indexOf('localhost') === -1)
+    ? `<div class="glass-card p-3 mb-1 border-l-4 border-amber-500"><p class="text-xs font-bold text-amber-700"><i class="bi bi-exclamation-triangle-fill"></i> Upstash Redis nahi laga!</p><p class="text-[11px] text-slate-600 mt-0.5">Vercel par keys permanent rakhne ke liye Upstash env variables lagao — README me steps hain. Nahi to generate ki keys gayab dikhengi.</p></div>` : '';
   const sec = (eng, grad, icon, enc) => {
     const st = j.status[eng];
     return `<div class="glass-card p-5 mb-4">
@@ -291,8 +347,34 @@ async function loadServer() {
       <button onclick="saveServer('${eng}')" class="btn-premium w-full py-3 rounded-2xl font-extrabold text-xs">SAVE ${eng} STATUS</button>
     </div>`;
   };
-  $('srv-mundo').innerHTML = sec('MUNDO', 'linear-gradient(135deg,#8b5cf6,#6366f1)', 'bi-cpu', 'AES-ECB');
-  $('srv-bcore').innerHTML = sec('BCORE', 'linear-gradient(135deg,#f59e0b,#f97316)', 'bi-lightning-charge-fill', 'RC4');
+  $('srv-mundo').innerHTML = sec('MUNDO', 'linear-gradient(135deg,#8b5cf6,#6366f1)', 'bi-cpu', 'AES-ECB') + encCard('MUNDO') + sampleCard('MUNDO');
+  $('srv-bcore').innerHTML = sec('BCORE', 'linear-gradient(135deg,#f59e0b,#f97316)', 'bi-lightning-charge-fill', 'RC4') + encCard('BCORE') + sampleCard('BCORE');
+
+  const act = j.activity || [];
+  $('srvActivity').innerHTML = `<div class="glass-card p-4"><h3 class="font-bold text-sm mb-3"><i class="bi bi-lightning-charge text-amber-500"></i> Live Verify Activity <span class="text-[9px] text-slate-400 font-bold">last ${act.length}</span></h3>${
+    act.length === 0 ? '<p class="text-[11px] text-slate-400 italic">Abhi koi app verify hit nahi aayi — app se API hit karo, yaha dikhega.</p>' :
+    act.map((a) => `<div class="clay-card p-2.5 mb-2 flex items-center gap-2">
+      <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded ${a.engine === 'MUNDO' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-600'}">${a.engine}</span>
+      <div class="flex-1 min-w-0"><p class="font-mono text-[11px] font-bold truncate">${esc(a.key)} <span class="text-slate-400 font-normal">${esc(a.pkg)} / ${esc(a.app)}</span></p>
+      <p class="text-[9px] text-slate-400">${esc(new Date(a.t).toLocaleString())}</p></div>
+      <span class="text-[9px] font-extrabold px-1.5 py-0.5 rounded ${a.ok ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}">${a.ok ? 'OK' : esc(a.code)}</span>
+    </div>`).join('')}</div>`;
+}
+function encCard(eng) {
+  const m = eng === 'MUNDO';
+  return `<div class="glass-card p-4 mb-4"><h3 class="font-bold text-sm mb-2"><i class="bi bi-shield-lock-fill ${m ? 'text-purple-500' : 'text-amber-500'}"></i> Encryption — ${eng}</h3>
+  <div class="text-[11px] ${m ? 'text-purple-700 bg-purple-50/70 border-purple-100' : 'text-amber-700 bg-amber-50/70 border-amber-100'} border rounded-xl p-3">
+  ${m ? '<p><b>AES-128-ECB + Base64</b></p><p class="mt-1">Salt: <code>https://mundo.cp.cheat/v2/api/verify</code></p><p class="mt-1">Payload: <code>S1|S2|S3_A|S3_B</code> (pipe-separated)</p>'
+      : '<p><b>RC4 + Base64</b></p><p class="mt-1">Secret: <code>YuviMatrix_Secure_2026</code></p><p class="mt-1">Payload: <code>sdk_key + pkg_name + app_name + device_id</code></p>'}
+  </div></div>`;
+}
+function sampleCard(eng) {
+  const ok = eng === 'MUNDO'
+    ? '{\n  "status": true,\n  "code": "success",\n  "message": "SDK key validated successfully"\n}'
+    : '{\n  "status": "success",\n  "code": "VALID",\n  "data": { "features1": true, "features2": false }\n}';
+  return `<div class="glass-card p-4 mb-4"><h3 class="font-bold text-sm mb-2"><i class="bi bi-check-circle-fill text-emerald-500"></i> Success sample <span class="text-[9px] font-extrabold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-lg">200 OK</span></h3>
+  <div class="bg-slate-900 rounded-xl p-3 overflow-x-auto"><pre class="text-[11px] font-mono text-emerald-300">${esc(ok)}</pre></div>
+  <div class="mt-2 text-[11px] text-slate-500">Error codes: <code>SERVER_MAINTENANCE(503) • INVALID_KEY(403) • EXPIRED_KEY(403) • PKG_LIMIT_REACHED(403) • APP_LIMIT_REACHED(403)</code> — response hamesha encrypted aata hai.</div></div>`;
 }
 async function saveServer(eng) {
   try {

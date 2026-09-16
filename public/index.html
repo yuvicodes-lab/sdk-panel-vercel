@@ -101,7 +101,8 @@
     <!-- ============ SERVER (OWNER) ============ -->
     <div id="page-server" class="page">
       <div class="mt-2 mb-4"><h1 class="text-xl font-black flex items-center gap-2"><i class="bi bi-hdd-network-fill text-emerald-500"></i> Server & API</h1>
-      <p class="text-xs text-slate-500">Endpoints + maintenance (Owner only)</p></div>
+      <p class="text-xs text-slate-500">Endpoints + maintenance + live activity (Owner only)</p></div>
+      <div id="srvStrip" class="grid grid-cols-2 gap-3 mb-4"></div>
       <div class="dual-tab-container mb-4">
         <button class="dual-tab-btn active-mundo" data-g="srv" data-tab="mundo" onclick="switchTab('srv','mundo')">MUNDO</button>
         <button class="dual-tab-btn" data-g="srv" data-tab="bcore" onclick="switchTab('srv','bcore')">BCORE</button>
@@ -109,6 +110,20 @@
       <div id="srvMsg"></div>
       <div class="tab-content-panel active" id="srv-mundo"></div>
       <div class="tab-content-panel" id="srv-bcore"></div>
+      <div id="srvActivity" class="mt-4"></div>
+    </div>
+
+    <!-- ============ KEY TEST ============ -->
+    <div id="page-test" class="page">
+      <div class="mt-2 mb-4"><h1 class="text-xl font-black flex items-center gap-2"><i class="bi bi-flask text-emerald-500"></i> Key Test</h1>
+      <p class="text-xs text-slate-500">Key sahi chal rahi? Dry-run check — limit kharch nahi hogi</p></div>
+      <div class="dual-tab-container mb-4">
+        <button class="dual-tab-btn active-mundo" data-g="tst" data-tab="mundo" onclick="switchTab('tst','mundo')">MUNDO</button>
+        <button class="dual-tab-btn" data-g="tst" data-tab="bcore" onclick="switchTab('tst','bcore')">BCORE</button>
+      </div>
+      <div class="tab-content-panel active" id="tst-mundo"></div>
+      <div class="tab-content-panel" id="tst-bcore"></div>
+      <div id="testResult" class="mt-4"></div>
     </div>
 
     <!-- ============ REFERRAL (OWNER) ============ -->
@@ -140,6 +155,7 @@
     <button id="nav-dashboard" onclick="go('dashboard')"><i class="bi bi-speedometer2"></i>Home</button>
     <button id="nav-generate" onclick="go('generate')"><i class="bi bi-key-fill"></i>Generate</button>
     <button id="nav-keys" onclick="go('keys')"><i class="bi bi-view-list"></i>Keys</button>
+    <button id="nav-test" onclick="go('test')"><i class="bi bi-flask"></i>Test</button>
     <button id="nav-server" onclick="go('server')"><i class="bi bi-hdd-network-fill"></i>Server</button>
     <button id="nav-referral" onclick="go('referral')"><i class="bi bi-ticket-perforated-fill"></i>Referral</button>
   </nav>

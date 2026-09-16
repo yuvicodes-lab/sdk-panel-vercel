@@ -2,11 +2,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { loadDB } from '../../lib/db';
 import { getAuthUser, sendJson } from '../../lib/auth';
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  const user = getAuthUser(req);
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const user = await getAuthUser(req);
   if (!user) return sendJson(res, 401, { error: 'Login required' });
   if (req.method !== 'GET') return sendJson(res, 405, { error: 'Only GET' });
-  const db = loadDB();
+  const db = await loadDB();
   const isOwner = user.role === 'OWNER';
 
   const mAll = db.mundo_keys.filter((k) => (isOwner ? true : k.userId === user.id));
